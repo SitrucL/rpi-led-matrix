@@ -28,6 +28,11 @@ const normalizeDegrees = (degrees: number): number => {
   return normalized < 0 ? normalized + 360 : normalized;
 };
 
+const normalizeHours = (hours: number): number => {
+  const normalized = hours % 24;
+  return normalized < 0 ? normalized + 24 : normalized;
+};
+
 export const getZonedDateTimeParts = (
   date: Date,
   timeZone: string
@@ -101,7 +106,7 @@ const calculateSunTimeUtcHoursRaw = (
       sinDec * Math.sin(toRadians(latitude))) /
     (cosDec * Math.cos(toRadians(latitude)));
 
-  if (cosH > 1 || cosH < -1) {
+  if (!Number.isFinite(cosH) || cosH > 1 || cosH < -1) {
     return null;
   }
 
@@ -112,7 +117,8 @@ const calculateSunTimeUtcHoursRaw = (
   const localMeanTime =
     localHourHours + rightAscension - 0.06571 * t - 6.622;
 
-  return localMeanTime - lngHour;
+  const utcHours = normalizeHours(localMeanTime - lngHour);
+  return Number.isFinite(utcHours) ? utcHours : null;
 };
 
 export const getSunTimesForDate = (

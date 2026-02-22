@@ -62,54 +62,69 @@ const zonedMinutes = (date: Date, timeZone: string): number => {
 };
 
 const getBrightnessForNow = (date: Date, config: MapModeConfig): number => {
-  const location: SunLocation = {
-    lat: config.lat,
-    lng: config.lng,
-    timeZone: config.timeZone,
-  };
-  const { sunrise, sunset } = getSunTimesForDate(date, location);
-  const transition = config.transitionMinutes;
+  try {
+    const location: SunLocation = {
+      lat: config.lat,
+      lng: config.lng,
+      timeZone: config.timeZone,
+    };
+    const { sunrise, sunset } = getSunTimesForDate(date, location);
+    const transition = config.transitionMinutes;
 
-  if (!sunrise || !sunset) {
-    const localMinute = zonedMinutes(date, config.timeZone);
-    return localMinute >= FALLBACK_DAY_START_MINUTE &&
-      localMinute < FALLBACK_DAY_END_MINUTE
-      ? config.dayBrightness
-      : config.nightBrightness;
-  }
+    if (!sunrise || !sunset) {
+      const localMinute = zonedMinutes(date, config.timeZone);
+      return localMinute >= FALLBACK_DAY_START_MINUTE &&
+        localMinute < FALLBACK_DAY_END_MINUTE
+        ? config.dayBrightness
+        : config.nightBrightness;
+    }
 
-  const nowMs = date.getTime();
-  const sunriseMs = sunrise.getTime();
-  const sunsetMs = sunset.getTime();
-  const transitionMs = transition * 60_000;
+    const nowMs = date.getTime();
+    const sunriseMs = sunrise.getTime();
+    const sunsetMs = sunset.getTime();
+    const transitionMs = transition * 60_000;
 
-  if (nowMs < sunriseMs - transitionMs) {
+    if (
+      !Number.isFinite(nowMs) ||
+      !Number.isFinite(sunriseMs) ||
+      !Number.isFinite(sunsetMs) ||
+      !Number.isFinite(transitionMs) ||
+      transitionMs <= 0
+    ) {
+      return config.dayBrightness;
+    }
+
+    if (nowMs < sunriseMs - transitionMs) {
+      return config.nightBrightness;
+    }
+
+    if (nowMs <= sunriseMs + transitionMs) {
+      const t = clamp(
+        (nowMs - (sunriseMs - transitionMs)) / (transitionMs * 2),
+        0,
+        1
+      );
+      return Math.round(lerp(config.nightBrightness, config.dayBrightness, t));
+    }
+
+    if (nowMs < sunsetMs - transitionMs) {
+      return config.dayBrightness;
+    }
+
+    if (nowMs <= sunsetMs + transitionMs) {
+      const t = clamp(
+        (nowMs - (sunsetMs - transitionMs)) / (transitionMs * 2),
+        0,
+        1
+      );
+      return Math.round(lerp(config.dayBrightness, config.nightBrightness, t));
+    }
+
     return config.nightBrightness;
-  }
-
-  if (nowMs <= sunriseMs + transitionMs) {
-    const t = clamp(
-      (nowMs - (sunriseMs - transitionMs)) / (transitionMs * 2),
-      0,
-      1
-    );
-    return Math.round(lerp(config.nightBrightness, config.dayBrightness, t));
-  }
-
-  if (nowMs < sunsetMs - transitionMs) {
+  } catch (error) {
+    console.warn('[map-mode] brightness fallback:', error);
     return config.dayBrightness;
   }
-
-  if (nowMs <= sunsetMs + transitionMs) {
-    const t = clamp(
-      (nowMs - (sunsetMs - transitionMs)) / (transitionMs * 2),
-      0,
-      1
-    );
-    return Math.round(lerp(config.dayBrightness, config.nightBrightness, t));
-  }
-
-  return config.nightBrightness;
 };
 
 const setPixelRgb = (
@@ -191,10 +206,23 @@ const main = async (): Promise<void> => {
   );
 
   matrix.clear();
+  // Sanity frame so drawBuffer path is visibly validated before dimming logic/pan updates.
+  frameBuffer.fill(0);
+  for (let y = 0; y < Math.min(8, viewHeight); y += 1) {
+    for (let x = 0; x < Math.min(16, viewWidth); x += 1) {
+      setPixelRgb(frameBuffer, viewWidth, x, y, { r: 255, g: 255, b: 255 });
+    }
+  }
+  matrix.brightness(MAP_MODE_CONFIG.dayBrightness).drawBuffer(frameBuffer, viewWidth, viewHeight).sync();
+  await wait(500);
 
   while (shouldRun) {
     const now = new Date();
-    const brightness = getBrightnessForNow(now, MAP_MODE_CONFIG);
+    const brightness = clamp(
+      getBrightnessForNow(now, MAP_MODE_CONFIG),
+      1,
+      100
+    );
     const elapsedSeconds = (Date.now() - start) / 1000;
     const panOffset =
       Math.floor(elapsedSeconds * MAP_MODE_CONFIG.panPixelsPerSecond) %
