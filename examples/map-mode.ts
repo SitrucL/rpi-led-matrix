@@ -40,10 +40,10 @@ const FALLBACK_DAY_END_MINUTE = 20 * 60;
 const MAP_MODE_CONFIG: MapModeConfig = {
   worldWidth: WORLD_MAP_WIDTH,
   worldHeight: WORLD_MAP_HEIGHT,
-  worldYStart: 10,
-  worldYEnd: 50,
+  worldYStart: 0,
+  worldYEnd: WORLD_MAP_HEIGHT,
   frameMs: 50,
-  panPixelsPerSecond: 3,
+  panPixelsPerSecond: 6,
   lat: 37.7749,
   lng: -122.4194,
   timeZone: 'America/Los_Angeles',
@@ -136,6 +136,7 @@ const renderViewport = (
   matrix.clear().fgColor(config.landColorHex);
 
   const bandRows = config.worldYEnd - config.worldYStart;
+  const xScale = config.worldWidth / viewWidth;
 
   for (let y = 0; y < viewHeight; y += 1) {
     const worldY =
@@ -144,7 +145,7 @@ const renderViewport = (
         : config.worldYStart + Math.round((y / (viewHeight - 1)) * (bandRows - 1));
 
     for (let x = 0; x < viewWidth; x += 1) {
-      const worldX = (x + panOffset) % config.worldWidth;
+      const worldX = Math.floor(x * xScale + panOffset) % config.worldWidth;
       const land = mask.isLand(worldX, worldY);
       const pixelOn = config.invertPolarity ? !land : land;
 
@@ -195,7 +196,7 @@ const main = async (): Promise<void> => {
     );
     const elapsedSeconds = (Date.now() - start) / 1000;
     const panOffset =
-      Math.floor(elapsedSeconds * MAP_MODE_CONFIG.panPixelsPerSecond) %
+      (elapsedSeconds * MAP_MODE_CONFIG.panPixelsPerSecond) %
       MAP_MODE_CONFIG.worldWidth;
 
     renderViewport(
