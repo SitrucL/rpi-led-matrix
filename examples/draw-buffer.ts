@@ -11,6 +11,8 @@ import { matrixOptions, runtimeOptions } from './_config';
     const buffer1 = Buffer.of(
       ...baseBuffer.map(() => (Math.random() < 0.1 ? 0xff : 0x00))
     );
+
+console.log("buffer1: ", buffer1)
     const buffer2 = Buffer.of(
       ...baseBuffer.map(() => (Math.random() < 0.1 ? 0xff : 0x00))
     );
