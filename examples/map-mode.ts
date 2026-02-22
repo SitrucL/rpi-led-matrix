@@ -40,8 +40,8 @@ const FALLBACK_DAY_END_MINUTE = 20 * 60;
 const MAP_MODE_CONFIG: MapModeConfig = {
   worldWidth: WORLD_MAP_WIDTH,
   worldHeight: WORLD_MAP_HEIGHT,
-  worldYStart: 5,
-  worldYEnd: 55,
+  worldYStart: 0,
+  worldYEnd: WORLD_MAP_HEIGHT,
   frameMs: 50,
   panPixelsPerSecond: 2,
   lat: 37.7749,
@@ -136,7 +136,7 @@ const renderViewport = (
   matrix.clear().fgColor(config.landColorHex);
 
   const bandRows = config.worldYEnd - config.worldYStart;
-  const xScale = 3;
+  const xScale = 2;
 
   for (let y = 0; y < viewHeight; y += 1) {
     const worldY =
