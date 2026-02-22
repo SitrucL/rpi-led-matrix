@@ -1,4 +1,4 @@
-import { LedMatrix } from '../src';
+import { LedMatrix, LedMatrixInstance } from '../src';
 import { matrixOptions, runtimeOptions } from './_config';
 import {
   createWorldMask,
@@ -7,12 +7,6 @@ import {
   WORLD_MAP_WIDTH,
 } from './map-mask-world';
 import { getSunTimesForDate, getZonedDateTimeParts, type SunLocation } from './sun-times';
-
-interface Rgb {
-  r: number;
-  g: number;
-  b: number;
-}
 
 interface MapModeConfig {
   worldWidth: number;
@@ -25,7 +19,7 @@ interface MapModeConfig {
   dayBrightness: number;
   nightBrightness: number;
   transitionMinutes: number;
-  landColor: Rgb;
+  landColorHex: number;
   invertPolarity: boolean;
 }
 
@@ -52,7 +46,7 @@ const MAP_MODE_CONFIG: MapModeConfig = {
   dayBrightness: 100,
   nightBrightness: 20,
   transitionMinutes: 45,
-  landColor: { r: 255, g: 238, b: 214 },
+  landColorHex: (255 << 16) | (238 << 8) | 214,
   invertPolarity: false,
 };
 
@@ -127,34 +121,16 @@ const getBrightnessForNow = (date: Date, config: MapModeConfig): number => {
   }
 };
 
-const setPixelRgb = (
-  buffer: Buffer,
-  width: number,
-  x: number,
-  y: number,
-  color: Rgb
-): void => {
-  const index = (y * width + x) * 3;
-  buffer[index] = color.r;
-  buffer[index + 1] = color.g;
-  buffer[index + 2] = color.b;
-};
-
-const clearPixel = (buffer: Buffer, width: number, x: number, y: number): void => {
-  const index = (y * width + x) * 3;
-  buffer[index] = 0;
-  buffer[index + 1] = 0;
-  buffer[index + 2] = 0;
-};
-
 const renderViewport = (
   mask: WorldMask,
-  buffer: Buffer,
+  matrix: LedMatrixInstance,
   viewWidth: number,
   viewHeight: number,
   panOffset: number,
   config: MapModeConfig
 ): void => {
+  matrix.clear().fgColor(config.landColorHex);
+
   for (let y = 0; y < viewHeight; y += 1) {
     const worldY =
       viewHeight === 1
@@ -167,9 +143,7 @@ const renderViewport = (
       const pixelOn = config.invertPolarity ? !land : land;
 
       if (pixelOn) {
-        setPixelRgb(buffer, viewWidth, x, y, config.landColor);
-      } else {
-        clearPixel(buffer, viewWidth, x, y);
+        matrix.setPixel(x, y);
       }
     }
   }
@@ -186,7 +160,6 @@ const main = async (): Promise<void> => {
     );
   }
 
-  const frameBuffer = Buffer.alloc(viewWidth * viewHeight * 3);
   const mask = createWorldMask();
   const start = Date.now();
 
@@ -205,16 +178,7 @@ const main = async (): Promise<void> => {
     `[map-mode] tz=${MAP_MODE_CONFIG.timeZone} lat=${MAP_MODE_CONFIG.lat} lng=${MAP_MODE_CONFIG.lng} pan=${MAP_MODE_CONFIG.panPixelsPerSecond}px/s`
   );
 
-  matrix.clear();
-  // Sanity frame so drawBuffer path is visibly validated before dimming logic/pan updates.
-  frameBuffer.fill(0);
-  for (let y = 0; y < Math.min(8, viewHeight); y += 1) {
-    for (let x = 0; x < Math.min(16, viewWidth); x += 1) {
-      setPixelRgb(frameBuffer, viewWidth, x, y, { r: 255, g: 255, b: 255 });
-    }
-  }
-  matrix.brightness(MAP_MODE_CONFIG.dayBrightness).drawBuffer(frameBuffer, viewWidth, viewHeight).sync();
-  await wait(500);
+  matrix.clear().brightness(MAP_MODE_CONFIG.dayBrightness).sync();
 
   while (shouldRun) {
     const now = new Date();
@@ -230,14 +194,14 @@ const main = async (): Promise<void> => {
 
     renderViewport(
       mask,
-      frameBuffer,
+      matrix,
       viewWidth,
       viewHeight,
       panOffset,
       MAP_MODE_CONFIG
     );
 
-    matrix.brightness(brightness).drawBuffer(frameBuffer, viewWidth, viewHeight).sync();
+    matrix.brightness(brightness).sync();
 
     await wait(MAP_MODE_CONFIG.frameMs);
   }
