@@ -363,6 +363,16 @@ e.g. to run the text-layout CLI example:
 $ sudo npm run example -- examples/text-layout-cli.ts
 ```
 
+There is also a personal-art-style offline map example (`examples/map-mode.ts`) that renders a hardcoded land-mask world projection and slowly pans it across the display. It is designed for installations where the physical faceplate/mask creates the final visual effect (for example, an oval "globe" window).
+
+To run it:
+
+```ts
+$ sudo npm run example -- examples/map-mode.ts
+```
+
+Before running, update the location and brightness constants in `examples/map-mode.ts` (latitude, longitude, timezone, day/night brightness) so the sunrise/sunset auto-dimming matches your setup.
+
 ### Using your own config
 
 Inside the examples directory is a file named `_config.ts`, which exports the two matrix configuration types: `MatrixOptions` and `RuntimeOptions`.
