@@ -11,6 +11,8 @@ import { getSunTimesForDate, getZonedDateTimeParts, type SunLocation } from './s
 interface MapModeConfig {
   worldWidth: number;
   worldHeight: number;
+  worldYStart: number;
+  worldYEnd: number;
   frameMs: number;
   panPixelsPerSecond: number;
   lat: number;
@@ -38,8 +40,10 @@ const FALLBACK_DAY_END_MINUTE = 20 * 60;
 const MAP_MODE_CONFIG: MapModeConfig = {
   worldWidth: WORLD_MAP_WIDTH,
   worldHeight: WORLD_MAP_HEIGHT,
-  frameMs: 100,
-  panPixelsPerSecond: 0.5,
+  worldYStart: 10,
+  worldYEnd: 50,
+  frameMs: 50,
+  panPixelsPerSecond: 3,
   lat: 37.7749,
   lng: -122.4194,
   timeZone: 'America/Los_Angeles',
@@ -131,11 +135,13 @@ const renderViewport = (
 ): void => {
   matrix.clear().fgColor(config.landColorHex);
 
+  const bandRows = config.worldYEnd - config.worldYStart;
+
   for (let y = 0; y < viewHeight; y += 1) {
     const worldY =
       viewHeight === 1
-        ? 0
-        : Math.round((y / (viewHeight - 1)) * (config.worldHeight - 1));
+        ? config.worldYStart
+        : config.worldYStart + Math.round((y / (viewHeight - 1)) * (bandRows - 1));
 
     for (let x = 0; x < viewWidth; x += 1) {
       const worldX = (x + panOffset) % config.worldWidth;
