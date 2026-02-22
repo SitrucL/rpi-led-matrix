@@ -12,7 +12,7 @@ export const matrixOptions: MatrixOptions = {
   ...LedMatrix.defaultMatrixOptions(),
   rows: 64,
   cols: 64,
-  chainLength: 1,
+  chainLength: 2,
   hardwareMapping: GpioMapping.AdafruitHatPwm,
   parallel: 1,
   // panelType: 'FM6127',
