@@ -135,18 +135,10 @@ const renderViewport = (
 ): void => {
   matrix.clear().fgColor(config.landColorHex);
 
-  const bandRows = config.worldYEnd - config.worldYStart;
-  const xScale = 2;
-
   for (let y = 0; y < viewHeight; y += 1) {
-    const worldY =
-      viewHeight === 1
-        ? config.worldYStart
-        : config.worldYStart + Math.round((y / (viewHeight - 1)) * (bandRows - 1));
-
     for (let x = 0; x < viewWidth; x += 1) {
-      const worldX = Math.floor(x * xScale + panOffset) % config.worldWidth;
-      const land = mask.isLand(worldX, worldY);
+      const worldX = Math.floor(x + panOffset) % config.worldWidth;
+      const land = mask.isLand(worldX, y);
       const pixelOn = config.invertPolarity ? !land : land;
 
       if (pixelOn) {
