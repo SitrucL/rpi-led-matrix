@@ -136,7 +136,7 @@ const renderViewport = (
   matrix.clear().fgColor(config.landColorHex);
 
   const bandRows = config.worldYEnd - config.worldYStart;
-  const xScale = config.worldWidth / viewWidth;
+  const xScale = 2;
 
   for (let y = 0; y < viewHeight; y += 1) {
     const worldY =
